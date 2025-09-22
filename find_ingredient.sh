@@ -1,10 +1,10 @@
+
 #!/usr/bin/env bash
 # Usage: ./find_ingredient.sh -i "<ingredient>" -d /path/to/folder
 # Input: products.csv (TSV) must exist inside the folder.
 # Output: product_name<TAB>code for matches, then a final count line.
 set -euo pipefail # safer Bash: fail on errors/unset vars/pipelines
 # Allow up to 1 GB per field
-export CSVKIT_FIELD_SIZE_LIMIT=$((1024 * 1024 * 1024))
 INGREDIENT=""; DATA_DIR=""; CSV=""
 usage() {
 	echo "Usage: $0 -i \"<ingredient>\" -d /path/to/folder"
@@ -14,7 +14,7 @@ usage() {
 }
 # Parse flags (getopts)
 while getopts ":i:d:h" opt; do
-	case "$opt" in	
+	case "$opt" in
 		i) INGREDIENT="$OPTARG" ;;
 		d) DATA_DIR="$OPTARG" ;;
 		h) usage; exit 0 ;;
@@ -31,12 +31,9 @@ for cmd in csvcut csvgrep csvformat; do
 	command -v "$cmd" >/dev/null 2>&1 || { echo "ERROR: $cmd not found. Please install csvkit." >&2; exit
 		1; }
 done
-# Normalize Windows CRs (if any) into a temp file to avoid parsing issues
-tmp_csv="$(mktemp)"
-tr -d '\r' < "$CSV" > "$tmp_csv"
 # Pipeline:
 tmp_matches="$(mktemp)"
-csvcut -t -c ingredients_text,product_name,code "$tmp_csv" \
+csvcut -t -c ingredients_text,product_name,code "$CSV" \
 | csvgrep -c ingredients_text -r "(?i)${INGREDIENT}" \
 | csvcut -c product_name,code \
 | csvformat -T \
@@ -45,6 +42,5 @@ csvcut -t -c ingredients_text,product_name,code "$tmp_csv" \
 count="$(wc -l < "$tmp_matches" | tr -d ' ')"
 echo "----"
 echo "Found ${count} product(s) containing: \"${INGREDIENT}\""
-5/8
 # cleanup
-rm -f "$tmp_csv" "$tmp_matches"
+rm -f "$tmp_matches"
